@@ -182,12 +182,14 @@ def main():
 			# Also the notes are out of order too
 			if value == 1:
 				if (key in key_sound.keys()) and (not is_playing[key]):
-					pygame.mixer.Sound(notes[key_sound[key]]).play(fade_ms=50)
+					# pygame.mixer.Sound(notes[key_sound[key]]).play(fade_ms=50)
+					notes[key_sound[key]].play(fade_ms=50)
 					is_playing[key] = True
 					print("Key {} {}".format(key, "On"))
 			if value == 0:
-				if (key in key_sound.keys()) and (not is_playing[key]):
-					pygame.mixer.Sound(notes[key_sound[key]]).fadeout(200)
+				if (key in key_sound.keys()) and (is_playing[key]):
+					# pygame.mixer.Sound(notes[key_sound[key]]).fadeout(50)
+					notes[key_sound[key]].fadeout(200)
 					is_playing[key] = False
 					print("Key {} {}".format(key, "Off"))
 

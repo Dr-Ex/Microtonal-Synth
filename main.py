@@ -11,8 +11,8 @@ from pygame.locals import *
 import sys
 import warnings
 
-serialinterface = "COM3"
-# serialinterface = "/dev/tty.usbmodem1411"
+# serialinterface = "COM3"
+serialinterface = "/dev/tty.usbmodem1431"
 
 def speedx(snd_array, factor):
 	""" Speeds up / slows down a sound, by some factor. """
@@ -133,6 +133,7 @@ def main():
 	keys = []
 	for i in range(buttonCount):
 		keys.append(i)
+	print(keys)
 	sounds = map(pygame.sndarray.make_sound, transposed_sounds)
 	key_sound = dict(zip(keys, sounds))
 	is_playing = {k: False for k in keys}

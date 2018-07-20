@@ -2,7 +2,7 @@
 // https://arduino.stackexchange.com/questions/1263/interference-at-digital-input-uno
 
 const int boardNo = 0;
-const int buttonPins[] = {2, 5, 7, 8};
+const int buttonPins[] = {2, 5, 7};
 const int buttonCount = sizeof(buttonPins)/sizeof(int);
 int buttonStates[buttonCount];
 int lastButtonStates[buttonCount];
