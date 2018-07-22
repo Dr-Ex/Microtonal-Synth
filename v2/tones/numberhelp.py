@@ -52,13 +52,15 @@ aFreq = 440.0
 
 currentFreq = aFreq
 for i in range(len(tonelist)-29):
-	newFreq = round(currentFreq * (2 ** (-12.5/1200)), 2)
+	# newFreq = round(currentFreq * (2 ** (-12.5/1200)), 2)
+	newFreq = round(currentFreq*(2**(1/96)), 2)
 	finaldict[tonelist[74-i]] = newFreq
 	currentFreq = newFreq
 
 currentFreq = aFreq
 for i in range(len(tonelist)-75):
-	newFreq = round((2 ** ((12.5/1200) + math.log(currentFreq, 2))), 2)
+	# newFreq = round((2 ** ((12.5/1200) + math.log(currentFreq, 2))), 2)
+	newFreq = round(currentFreq/(2**(1/96)))
 	finaldict[tonelist[i+75]] = currentFreq
 	currentFreq += 12.5
 print(finaldict)

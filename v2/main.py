@@ -19,67 +19,27 @@ import warnings
 import os
 
 # serialinterface = "COM3"
-serialinterface = "/dev/tty.usbmodem1431"
+serialinterface = "/dev/tty.wchusbserial1430"
 
-def speedx(snd_array, factor):
-	""" Speeds up / slows down a sound, by some factor. """
-	indices = np.round(np.arange(0, len(snd_array), factor))
-	indices = indices[indices < len(snd_array)].astype(int)
-	return snd_array[indices]
-
-
-def stretch(snd_array, factor, window_size, h):
-	""" Stretches/shortens a sound, by some factor. """
-	phase = np.zeros(window_size)
-	hanning_window = np.hanning(window_size)
-	result = np.zeros(int(len(snd_array) / factor + window_size))
-
-	for i in np.arange(0, len(snd_array) - (window_size + h), h*factor):
-		i = int(i)
-		# Two potentially overlapping subarrays
-		a1 = snd_array[i: i + window_size]
-		a2 = snd_array[i + h: i + window_size + h]
-
-		# The spectra of these arrays
-		s1 = np.fft.fft(hanning_window * a1)
-		s2 = np.fft.fft(hanning_window * a2)
-
-		# Rephase all frequencies
-		phase = (phase + np.angle(s2/s1)) % 2*np.pi
-
-		a2_rephased = np.fft.ifft(np.abs(s2)*np.exp(1j*phase))
-		i2 = int(i/factor)
-		result[i2: i2 + window_size] += hanning_window*a2_rephased.real
-
-	# normalize (16bit)
-	result = ((2**(16-4)) * result/result.max())
-
-	return result.astype('int16')
-
-
-def pitchshift(snd_array, n, window_size=2**13, h=2**11):
-	""" Changes the pitch of a sound by ``n`` semitones. """
-	factor = 2**(1.0 * n / 12.0)
-	stretched = stretch(snd_array, 1.0/factor, window_size, h)
-	return speedx(stretched[window_size:], factor)
-
+tonelist = ['0B5', '0B6', '0B7',
+            '0C0', '0C1', '0C2', '0C3', '0C4', '0C5', '0C6', '0C7',
+            '0C#0', '0C#1', '0C#2', '0C#3', '0C#4', '0C#5', '0C#6', '0C#7',
+            '0D0', '0D1', '0D2', '0D3', '0D4', '0D5', '0D6', '0D7',
+            '0D#0', '0D#1', '0D#2', '0D#3', '0D#4', '0D#5', '0D#6', '0D#7',
+            '0E0', '0E1', '0E2', '0E3', '0E4', '0E5', '0E6', '0E7',
+            '0F0', '0F1', '0F2', '0F3', '0F4', '0F5', '0F6', '0F7',
+            '0F#0', '0F#1', '0F#2', '0F#3', '0F#4', '0F#5', '0F#6', '0F#7',
+            '0G0', '0G1', '0G2', '0G3', '0G4', '0G5', '0G6', '0G7',
+            '0G#0', '0G#1', '0G#2', '0G#3', '0G#4', '0G#5', '0G#6', '0G#7',
+            '1A0', '1A1', '1A2', '1A3', '1A4', '1A5', '1A6', '1A7',
+            '1A#0', '1A#1', '1A#2', '1A#3', '1A#4', '1A#5', '1A#6', '1A#7',
+            '1B0', '1B1', '1B2', '1B3', '1B4', '1B5', '1B6', '1B7',
+            '1C0', '1C1', '1C2', '1C3', '1C4']
 
 def parse_arguments():
 	description = ('Computer connection program to the Microtonal Synth')
 
 	parser = argparse.ArgumentParser(description=description)
-	# parser.add_argument(
-	# 	'--wav', '-w',
-	# 	metavar='FILE',
-	# 	type=argparse.FileType('r'),
-	# 	default='sine.wav',
-	# 	help='WAV file (default: sine.wav)')
-	# parser.add_argument(
-	# 	'--keyboard', '-k',
-	# 	metavar='FILE',
-	# 	type=argparse.FileType('r'),
-	# 	default='typewriter.kb',
-	# 	help='keyboard file (default: typewriter.kb)')
 	parser.add_argument(
 		'--verbose', '-v',
 		action='store_true',
@@ -129,11 +89,6 @@ def main():
 			buttonCount = int(line[1])
 			print("{} buttons registered.".format(buttonCount))
 			break
-	# tones = range((buttonCount//2)*-1, buttonCount//2)
-	# sys.stdout.write('Transponding sound file... ')
-	# sys.stdout.flush()
-	# transposed_sounds = [pitchshift(sound, n) for n in tones]
-	# print('DONE')
 
 	# So flexible ;)
 	pygame.mixer.init(44100, -16, 1, 2048)
@@ -143,17 +98,26 @@ def main():
 	tonedir = "tones/"
 	notes = {}
 	print("Registering notes...")
-	for file in os.listdir(tonedir):
-		if os.path.isfile(os.path.join(tonedir, file)) and file[-4:] == ".wav":
-			note = file[:-4]
-			# print(note)
-			# print(tonedir)
-			# print(file)
-			# fps, tone = wavfile.read("{}{}".format(tonedir, file))
-			soundID = pygame.mixer.Sound(tonedir + file)
-			notes[note] = soundID
+
+	# for file in os.listdir(tonedir):
+	# 	if os.path.isfile(os.path.join(tonedir, file)) and file[-4:] == ".wav":
+	# 		note = file[:-4]
+	# 		# print(note)
+	# 		# print(tonedir)
+	# 		# print(file)
+	# 		# fps, tone = wavfile.read("{}{}".format(tonedir, file))
+	# 		soundID = pygame.mixer.Sound(tonedir + file)
+	# 		notes[note] = soundID
+	# 	if len(notes) == buttonCount:
+	# 		break
+
+	for i in range(len(tonelist)):
+		note = tonelist[i]
+		soundID = pygame.mixer.Sound(tonedir + note + ".wav")
+		notes[note] = soundID
 		if len(notes) == buttonCount:
 			break
+			
 	print("{} notes registered".format(len(notes)))
 
 	keys = []
