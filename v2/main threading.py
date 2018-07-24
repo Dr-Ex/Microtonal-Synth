@@ -8,9 +8,7 @@
 
 import serial
 import queue, threading
-from scipy.io import wavfile
 import argparse
-import numpy as np
 import pygame
 from pygame.locals import *
 import sys
@@ -96,15 +94,6 @@ def main():
 	# Enable warnings from scipy if requested
 	if not args.verbose:
 		warnings.simplefilter('ignore')
-
-	# fps, sound = wavfile.read(args.wav.name)
-
-	# while True:
-	# 	line = (ser.readline()).decode('utf-8')
-	# 	if line[0] == "i":
-	# 		buttonCount = int(line[1])
-	# 		print("{} buttons registered.".format(buttonCount))
-	# 		break
 	initiatedBoards = 0
 	board0buttons = 0
 	board1buttons = 0
