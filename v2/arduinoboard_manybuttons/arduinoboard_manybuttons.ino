@@ -1,23 +1,28 @@
-const int boardNo = 0;
-const int buttonPins[] = {2, 5, 7};
-const int buttonCount = sizeof(buttonPins)/sizeof(int);
+const int boardNo = 1;
+const int buttonCount = 1;
+int buttonPins[buttonCount];
+//const int buttonCount = sizeof(buttonPins)/sizeof(int);
 int buttonStates[buttonCount];
 int lastButtonStates[buttonCount];
 
 void setup() {
-  for (int i=0; i <= buttonCount - 1; i++) {
-    pinMode(i, INPUT);
+  
+  for (int i=0; i < buttonCount; i++) {
+    buttonPins[i] = i+2;
+    pinMode(buttonPins[i], INPUT);
     buttonStates[i] = LOW;
     lastButtonStates[i] = LOW;
   }
   Serial.begin(9600);
   Serial.println("Ready");
   Serial.print("i");
-  Serial.println(buttonCount);
+  Serial.print(buttonCount);
+  Serial.print(" ");
+  Serial.println(boardNo);
 }
 
 void loop() {
-  for (int i=0; i <= buttonCount - 1; i++) {
+  for (int i=0; i < buttonCount; i++) {
     
 //    if (buttonStates[i] == null || lastButtonStates[i] == null) {
 //      buttonStates[i] = 0;

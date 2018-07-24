@@ -7,7 +7,7 @@
 #!/usr/local/bin/python3
 
 import serial
-# import Queue, threading
+import queue, threading
 from scipy.io import wavfile
 import argparse
 import numpy as np
@@ -18,7 +18,10 @@ import warnings
 import os
 
 # serialinterface = "COM3"
-serialinterface = "/dev/tty.wchusbserial1430"
+serialinterface = "/dev/tty.wchusbserial141430"
+serialinterfaces = ["/dev/tty.wchusbserial143430", '/dev/tty.usbmodem143441']
+
+q = queue.Queue(1000)
 
 tonelist = ['0B5', '0B6', '0B7',
             '0C0', '0C1', '0C2', '0C3', '0C4', '0C5', '0C6', '0C7',
@@ -34,6 +37,11 @@ tonelist = ['0B5', '0B6', '0B7',
             '1A#0', '1A#1', '1A#2', '1A#3', '1A#4', '1A#5', '1A#6', '1A#7',
             '1B0', '1B1', '1B2', '1B3', '1B4', '1B5', '1B6', '1B7',
             '1C0', '1C1', '1C2', '1C3', '1C4']
+
+class Board:
+	def __init__(self, boardNo, buttonCount):
+		self.boardNo = boardNo
+		self.buttonCount = buttonCount
 
 def parse_arguments():
 	description = ('Computer connection program to the Microtonal Synth')
@@ -53,42 +61,74 @@ def parse_arguments():
 def serial_read(s):
 	while True:
 		line = s.readline()
-		queue.put(line)
+		q.put(line)
 
 def main():
-	ser = serial.Serial(serialinterface, 9600)
+	serial0 = serial.Serial(serialinterfaces[0])
+	serial1 = serial.Serial(serialinterfaces[1])
+
+	thread1 = threading.Thread(target=serial_read, args=(serial0,),).start()
+	thread2 = threading.Thread(target=serial_read, args=(serial1,),).start()
 
 	# Parse command line arguments
 	(args, parser) = parse_arguments()
 
 	# ARDUINO CONNECTION DEBUGGING
 	if args.serialdebug:
-		ser = serial.Serial(serialinterface, 9600)
+		# ser = serial.Serial(serialinterface, 9600)
 		while True:
-			line = (ser.readline()).decode('utf-8')
-			if line[0] == "i":
-
-				buttonCount = line[1]
-				print("{} buttons registered.".format(buttonCount))
-			if line[0] == "n":
-				line = line[1:].split()
-				board = line[0]
-				note = line[1]
-				value = int(line[2])
-				print("Board {} Note {} {}".format(board, note, "On" if value==1 else "Off"))
+			if q.empty():
+				pass
+			else:
+				line = (q.get(True, 1)).decode('utf-8')
+				if line[0] == "i":
+					line = line[1:].split()
+					buttonCount = line[0]
+					board = line[1]
+					print("{} buttons registered on Board {}.".format(buttonCount, board))
+				if line[0] == "n":
+					line = line[1:].split()
+					board = line[0]
+					note = line[1]
+					value = int(line[2])
+					print("Board {} Note {} {}".format(board, note, "On" if value==1 else "Off"))
 
 	# Enable warnings from scipy if requested
 	if not args.verbose:
 		warnings.simplefilter('ignore')
 
 	# fps, sound = wavfile.read(args.wav.name)
-	while True:
-		line = (ser.readline()).decode('utf-8')
-		if line[0] == "i":
-			buttonCount = int(line[1])
-			print("{} buttons registered.".format(buttonCount))
-			break
 
+	# while True:
+	# 	line = (ser.readline()).decode('utf-8')
+	# 	if line[0] == "i":
+	# 		buttonCount = int(line[1])
+	# 		print("{} buttons registered.".format(buttonCount))
+	# 		break
+	initiatedBoards = 0
+	board0buttons = 0
+	board1buttons = 0
+	while True:
+		if q.empty():
+			pass
+		else:
+			line = (q.get(True, 1)).decode('utf-8')
+			if line[0] == "i":
+				line = line[1:].split()
+				board = int(line[1])
+				buttons = int(line[0])
+				if board == 0:
+					board0buttons = buttons
+				if board == 1:
+					board1buttons = buttons
+				print("{} buttons registered on Board {}.".format(line[0], line[1]))
+				initiatedBoards += 1
+				if initiatedBoards == 2:
+					break
+
+
+
+	buttonCount = board0buttons + board1buttons
 	# So flexible ;)
 	pygame.mixer.init(44100, -16, 1, 2048)
 	# For the focus
@@ -97,18 +137,6 @@ def main():
 	tonedir = "tones/"
 	notes = {}
 	print("Registering notes...")
-
-	# for file in os.listdir(tonedir):
-	# 	if os.path.isfile(os.path.join(tonedir, file)) and file[-4:] == ".wav":
-	# 		note = file[:-4]
-	# 		# print(note)
-	# 		# print(tonedir)
-	# 		# print(file)
-	# 		# fps, tone = wavfile.read("{}{}".format(tonedir, file))
-	# 		soundID = pygame.mixer.Sound(tonedir + file)
-	# 		notes[note] = soundID
-	# 	if len(notes) == buttonCount:
-	# 		break
 
 	for i in range(len(tonelist)):
 		note = tonelist[i]
@@ -129,32 +157,35 @@ def main():
 	print("Ready")
 
 	while True:
-		line = (ser.readline()).decode('utf-8')
+		if q.empty():
+			pass
+		else:
+			line = (q.get(True, 1)).decode('utf-8')
 
-		if line[0] == "e":
-			raise KeyboardInterrupt
+			if line[0] == "e":
+				raise KeyboardInterrupt
 
-		if line[0] == "n":
-			line = line[1:].split()
-			board = int(line[0])
-			key = int(line[1])
-			value = int(line[2])
+			if line[0] == "n":
+				line = line[1:].split()
+				board = int(line[0])
+				key = int(line[1])
+				value = int(line[2])
 
+				if board == 1:
+					key += board0buttons
 
-			# The notes turn on but then it doesnt register key offs eek
-			# Also the notes are out of order too
-			if value == 1:
-				if (key in key_sound.keys()) and (not is_playing[key]):
-					# pygame.mixer.Sound(notes[key_sound[key]]).play(fade_ms=50)
-					notes[key_sound[key]].play(fade_ms=50)
-					is_playing[key] = True
-					print("Key {} {}".format(key, "On"))
-			if value == 0:
-				if (key in key_sound.keys()) and (is_playing[key]):
-					# pygame.mixer.Sound(notes[key_sound[key]]).fadeout(50)
-					notes[key_sound[key]].fadeout(200)
-					is_playing[key] = False
-					print("Key {} {}".format(key, "Off"))
+				if value == 1:
+					if (key in key_sound.keys()) and (not is_playing[key]):
+						# pygame.mixer.Sound(notes[key_sound[key]]).play(fade_ms=50)
+						notes[key_sound[key]].play(fade_ms=50)
+						is_playing[key] = True
+						print("Key {} {}".format(key, "On"))
+				if value == 0:
+					if (key in key_sound.keys()) and (is_playing[key]):
+						# pygame.mixer.Sound(notes[key_sound[key]]).fadeout(50)
+						notes[key_sound[key]].fadeout(200)
+						is_playing[key] = False
+						print("Key {} {}".format(key, "Off"))
 
 
 if __name__ == '__main__':
