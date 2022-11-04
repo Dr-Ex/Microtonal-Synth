@@ -15,7 +15,7 @@ import sys
 import warnings
 import os
 
-serialinterfaces = ["/dev/tty.wchusbserial143430", '/dev/tty.usbmodem143441']
+serialinterfaces = ["/dev/tty.wchusbserial141430", '/dev/tty.wchusbserial141420']
 
 q = queue.Queue(1000)
 

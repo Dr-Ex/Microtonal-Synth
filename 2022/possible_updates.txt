@@ -1,0 +1,6 @@
+So... It's now 2022 and I want to continue this project.
+
+Updates to be made
+ - Scratch the whole pianoputer python interface and go straight to a DAW
+ - Employ use of USBMIDI, using the correct controllers or hacking the bootloaders
+ - Investigate multiplexing or figure out a way to host a master and slave arduino setup with the slave feeding button presses to the master which communicates via midi to the host computer
