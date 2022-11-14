@@ -1,0 +1,10 @@
+So... It's now 2022 and I want to continue this project.
+
+Updates to be made
+ - Scratch the whole pianoputer python interface and go straight to a DAW
+ - Employ use of USBMIDI, using the correct controllers or hacking the bootloaders
+ - Investigate multiplexing or figure out a way to host a master and slave arduino setup with the slave feeding button presses to the master which communicates via midi to the host computer
+
+I have the idea:
+    I shall use the existing arduino code to merge the two microcontrollers without a multiplexer, as I can't be bothered getting or making one. The uC i have can't act as a HID anyway. 
+    Change the python code to remove the need for PyGame and the Pianoputer/wav files. Instead use a serial to MIDI hairless setup.
