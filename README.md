@@ -1,4 +1,4 @@
-I am undergoing an upgrade from this project which began in 2018. Four years later, I have a lot more experience and knowledge from watching the process behind microtonal creators such as Sevish and Aaron Andrew Hunt (H$\pi$ creator).  
+I am undergoing an upgrade from this project which began in 2018. Four years later, I have a lot more experience and knowledge from watching the process behind microtonal creators such as Sevish and Aaron Andrew Hunt (HPi creator).  
 I will continue to update and strip back this repo, but the original 2018 version based on pianoputer is still available in the v0.1 fork.
 
 <h1>What is this???</h1>
