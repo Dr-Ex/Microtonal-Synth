@@ -1,6 +1,10 @@
 # Multiple Microcontroller controller for MIDI Interface
 
-#!/usr/local/bin/python3
+# Useful resource
+# http://www.elvenminstrel.com/music/tuning/reference/pitchbends.shtml
+
+# /usr/local/bin/python3
+#!env/bin/python3
 
 import serial
 import queue, threading
@@ -13,38 +17,27 @@ import os
 import logging
 import time
 
-from rtmidi.midiutil import open_midioutput
-from rtmidi.midiconstants import NOTE_OFF, NOTE_ON
+# Local modules
+from midioutwrapper import *
+from midi_classes import *
+
+
 
 # COM Ports of uCs
-# TODO: Make these change through args
+# TODO: uC port names through args
 serialinterfaces = ["/dev/tty.wchusbserial141430", '/dev/tty.wchusbserial141420']
+
 
 # Initialise Queue
 q = queue.Queue(1000)
 
-# Init midi log
-
-# tonelist = ['0B5', '0B6', '0B7',
-#             '0C0', '0C1', '0C2', '0C3', '0C4', '0C5', '0C6', '0C7',
-#             '0C#0', '0C#1', '0C#2', '0C#3', '0C#4', '0C#5', '0C#6', '0C#7',
-#             '0D0', '0D1', '0D2', '0D3', '0D4', '0D5', '0D6', '0D7',
-#             '0D#0', '0D#1', '0D#2', '0D#3', '0D#4', '0D#5', '0D#6', '0D#7',
-#             '0E0', '0E1', '0E2', '0E3', '0E4', '0E5', '0E6', '0E7',
-#             '0F0', '0F1', '0F2', '0F3', '0F4', '0F5', '0F6', '0F7',
-#             '0F#0', '0F#1', '0F#2', '0F#3', '0F#4', '0F#5', '0F#6', '0F#7',
-#             '0G0', '0G1', '0G2', '0G3', '0G4', '0G5', '0G6', '0G7',
-#             '0G#0', '0G#1', '0G#2', '0G#3', '0G#4', '0G#5', '0G#6', '0G#7',
-#             '1A0', '1A1', '1A2', '1A3', '1A4', '1A5', '1A6', '1A7',
-#             '1A#0', '1A#1', '1A#2', '1A#3', '1A#4', '1A#5', '1A#6', '1A#7',
-#             '1B0', '1B1', '1B2', '1B3', '1B4', '1B5', '1B6', '1B7',
-#             '1C0', '1C1', '1C2', '1C3', '1C4']
-
-
+# TODO: Should a board class be created?
 # class Board:
 # 	def __init__(self, boardNo, buttonCount):
 # 		self.boardNo = boardNo
 # 		self.buttonCount = buttonCount
+
+
 
 def parse_arguments():
 	description = ('Computer connection program to the Microtonal Synth')
@@ -61,59 +54,40 @@ def parse_arguments():
 
 	return (parser.parse_args(), parser)
 
-def serial_read(s):
+def serial_debug():
+	""" Initialise uCs and print interpreted events """
 	while True:
-		line = s.readline()
-		q.put(line)
+		if q.empty():
+			pass
+		else:
+			# Get next line from queue
+			line = (q.get(True, 1)).decode('utf-8')
 
-def main():
-
-	# Initialise the two serial interfaces
-	serial0 = serial.Serial(serialinterfaces[0])
-	serial1 = serial.Serial(serialinterfaces[1])
-
-	# Keep two threads adding incoming serial lines to the queue to parse
-	thread1 = threading.Thread(target=serial_read, args=(serial0,),).start()
-	thread2 = threading.Thread(target=serial_read, args=(serial1,),).start()
-
-	# Parse command line arguments
-	(args, parser) = parse_arguments()
-
-
-
-
-	# ARDUINO CONNECTION DEBUGGING ONLY
-	if args.serialdebug:
-		while True:
-			if q.empty():
-				pass
-			else:
-				# Get next line from queue
-				line = (q.get(True, 1)).decode('utf-8')
-
-				# Initialise signal received
-				if line[0] == "i":
-					line = line[1:].split()
-					buttonCount = line[0]
-					board = line[1]
-					print("{} buttons registered on Board {}.".format(buttonCount, board))
-				
+			
+			if line[0] == "i":
+				# 'Initialise' signal received
+				line = line[1:].split()
+				buttonCount = line[0]
+				board = line[1]
+				print("{} buttons registered on Board {}.".format(buttonCount, board))
+			
+			
+			if line[0] == "n":
 				# Note event received
-				if line[0] == "n":
-					line = line[1:].split()
-					board = line[0]
-					note = line[1]
-					value = int(line[2])
-					print("Board {} Note {} {}".format(board, note, "On" if value==1 else "Off"))
+				line = line[1:].split()
+				board = line[0]
+				note = line[1]
+				value = int(line[2])
+				print("Board {} Note {} {}".format(board, note, "On" if value==1 else "Off"))
 
+def init_boards():
+	""" Wait for uCs to initialise and return button amounts """
+	initialisedBoards = 0
 
-
-
-	initiatedBoards = 0
+	# TODO: Flexible board amount support
 	board0buttons = 0
 	board1buttons = 0
 
-	# Board initialisation
 	while True:
 		if q.empty():
 			pass
@@ -131,43 +105,48 @@ def main():
 				if board == 1:
 					board1buttons = buttons
 				print("{} buttons registered on Board {}.".format(line[0], line[1]))
-				initiatedBoards += 1
+				initialisedBoards += 1
 				# Only continue once two boards are initialised.
 				# TODO: Add support for different board amounts through args.
-				if initiatedBoards == 2:
+				if initialisedBoards == 2:
 					break
 
+	return board0buttons, board1buttons
 
+
+
+def serial_read(s):
+	# Continuously read from serial devices
+	# Used for threading
+	while True:
+		line = s.readline()
+		q.put(line)
+
+
+def main():
+
+	# Initialise the two serial interfaces
+	serial0 = serial.Serial(serialinterfaces[0])
+	serial1 = serial.Serial(serialinterfaces[1])
+
+	# Keep two threads adding incoming serial lines to the queue to parse
+	thread1 = threading.Thread(target=serial_read, args=(serial0,),).start()
+	thread2 = threading.Thread(target=serial_read, args=(serial1,),).start()
+
+	# Parse command line arguments
+	(args, parser) = parse_arguments()
+
+
+	# Debug serial connection without initialising MIDI 
+	if args.serialdebug:
+		serial_debug()
+
+	# Initialise uCs, and get the button amounts from each
+	board0buttons, board1buttons = init_boards()
 
 	buttonCount = board0buttons + board1buttons
 
-	# # So flexible ;)
-	# pygame.mixer.init(44100, -16, 1, 2048)
-	# # For the focus
-	# screen = pygame.display.set_mode((150, 150))
-
-	# tonedir = "tones/"
-	# notes = {}
-	# print("Registering notes...")
-
-	# for i in range(len(tonelist)):
-	# 	note = tonelist[i]
-	# 	soundID = pygame.mixer.Sound(tonedir + note + ".wav")
-	# 	notes[note] = soundID
-	# 	if len(notes) == buttonCount:
-	# 		break
-			
-	# print("{} notes registered".format(len(notes)))
-
-	# keys = []
-	# for i in range(buttonCount):
-	# 	keys.append(i)
-	# # sounds = map(pygame.sndarray.make_sound, transposed_sounds)
-	# key_sound = dict(zip(keys, notes))
-	# is_playing = {k: False for k in keys}
-
-	# print("Ready")
-
+	# TODO: Initialise note objects from csv file (from args)
 
 	while True:
 		if q.empty():
@@ -183,27 +162,20 @@ def main():
 			# Note event
 			if line[0] == "n":
 				line = line[1:].split()
-				board = int(line[0])
-				key = int(line[1])
-				value = int(line[2])
-				# There is a much more elegant way to do this
-				if board == 1:
-					key += board0buttons
+				board, key, value = int(line[0]), int(line[1]), int(line[2])
+				# If button is on board one, add the first boards buttons
+				key += board * board0buttons
+
+				# TODO: Map key to Note classes
+
+				if value == 1:
+					# Note on event
+					pass
+				else:
+					# Note off event
+					pass
 
 				
-
-				# if value == 1:
-				# 	if (key in key_sound.keys()) and (not is_playing[key]):
-				# 		# pygame.mixer.Sound(notes[key_sound[key]]).play(fade_ms=50)
-				# 		notes[key_sound[key]].play(fade_ms=50)
-				# 		is_playing[key] = True
-				# 		print("Key {} {}".format(key, "On"))
-				# if value == 0:
-				# 	if (key in key_sound.keys()) and (is_playing[key]):
-				# 		# pygame.mixer.Sound(notes[key_sound[key]]).fadeout(50)
-				# 		notes[key_sound[key]].fadeout(200)
-				# 		is_playing[key] = False
-				# 		print("Key {} {}".format(key, "Off"))
 
 
 if __name__ == '__main__':

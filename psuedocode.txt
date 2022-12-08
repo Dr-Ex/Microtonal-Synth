@@ -1,0 +1,20 @@
+
+Psuedocode for main
+    arduinos send init
+    program grabs board numbers and button counts (is button count necessary?)
+
+    arduino sends button down
+    program compares buttonID to map of note/tuning values
+    check for free channels (iterate over)
+    if there is a channel free, then play that note on that channel (storing buttonID for later check)
+        (if there isn't a channel free, don't play the note)
+            (note class and channel class?)
+
+    arduino sends button up
+    program checks channels for the same button down
+    if note exists (currently pressed), send note off and note the freed channel
+
+
+Tuning files
+    list of MIDI notes/PB values
+    convert existing tuning file (cents) to MIDI/PB map on launch (args input)
